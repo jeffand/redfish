@@ -1,5 +1,6 @@
 #!/usr/bin/ruby
 require "open-uri"
+require "rubygems"
 require "json"
 require "colorize"
 
@@ -18,16 +19,30 @@ end
 
 puts "MDB Host values read\n".yellow
 
-iloResponse = open('http://localhost:32768/redfish/v1/Systems/437XR1138R2/').read
+iloSystemResponse = open('http://localhost:32768/redfish/v1/Systems/437XR1138R2/').read
 
-systemInfo = JSON.parse(iloResponse)
+systemInfo = JSON.parse(iloSystemResponse)
 
-puts "Serial Number from system = #{systemInfo["SerialNumber"]} \n".yellow
+puts "Serial Number from system = \t#{systemInfo["SerialNumber"]}".yellow
 
-puts "Serial Number from file = #{mdbTable["serialNumber"]} \n".yellow
+puts "Serial Number from file = \t#{mdbTable["serialNumber"]}".yellow
 
 if mdbTable["serialNumber"] == systemInfo["SerialNumber"]
-	puts "Serial Numbers Match".green
+	puts "\t\t\t\tSerial Numbers Match".green
 else
-	puts "Serial Numbers Don't Match".red
+	puts "\t\t\t\tSerial Numbers Don't Match".red
 end
+
+iloBiosResponse = open('http://localhost:32768/redfish/v1/Systems/437XR1138R2/BIOS').read
+
+biosInfo = JSON.parse(iloBiosResponse)
+
+puts "\nBoot Mode from system = \t\t#{biosInfo["Attributes"]["BootMode"]}".yellow
+
+
+
+
+
+
+
+
