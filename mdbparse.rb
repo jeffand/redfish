@@ -39,6 +39,9 @@ biosInfo = JSON.parse(iloBiosResponse)
 
 puts "\nBoot Mode from system = \t\t#{biosInfo["Attributes"]["BootMode"]}".yellow
 
+myjsonobject = mdbTable.to_json
+
+puts myjsonobject
 
 
 
