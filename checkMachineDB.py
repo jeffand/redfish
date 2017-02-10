@@ -64,48 +64,4 @@ print machineDB['memorySize']
 print systemData['Memory']['TotalSystemMemoryGB']*1024
 
 
-print   "\n\n"
-print   "assetTag: "
-print   "comments: "
-print   "consoleHostName: "
-print   "macAddrConsole: {}".format(ethernetData['Items'][0]['FactoryMacAddress']) 
-#print machineDB[macAddrConsole]  
-#print ethernetData['Items'][0]['FactoryMacAddress']
-print   "consoleServer: "
-print   "consoleServerPort: "
-print   "cpuCount: {}".format(systemData['ProcessorSummary']['Count'])
-print   "cpuSpeed: "
-print   "datacenter: "
-print   "defaultRoute: "
-print   "dnsDomain: "
-print   "hardwareType: "
-print   "arch: "
-print   "hardwareVendor: "
-print   "hostname: "
-print   "ipAddr: "
-print   "ipAddrSecondary: "
-print   "lastUpdated: "
-print   "macAddr: {}".format(networkAdapters['PhysicalPorts'][0]['MacAddress'])
-print   "macAddrSecondary: {}".format(networkAdapters['PhysicalPorts'][1]['MacAddress'])
-print   "macAddrTernary: "
-print   "macAddrQuadrary: "
-print   "maintenance: "
-print   "memorySize: {}".format(systemData['Memory']['TotalSystemMemoryGB']*1024)
-print   "netmask: "
-print   "networkSwitch: "
-print   "networkSwitchPort: "
-print   "networkSwitchPortSecondary: "
-print   "networkSwitchSecondary: "
-print   "os: "
-print   "osPatchLevel: "
-print   "osVersion: "
-print   "owner: "
-print   "ownerTMID: "
-print   "providesServices: "
-print   "rackNumber: "
-print   "rackPorts: "
-print   "rackPosition: "
-print   "serialNumber: {}".format(systemData['SerialNumber'])
-print   "cageNumber: "
-print   "status: "
 
