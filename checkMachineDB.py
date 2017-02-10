@@ -7,7 +7,7 @@ import sys
 
 
 if len(sys.argv) < 2:
-	print "\nYou must specify the ILO hostname or ILO IP address for this to work.\n\n"
+	print "\nYou must specify the ILO hostname or ILO IP address and the machinedb file name for this to work.\n\t\tcheckMachineDB <ILO Hostname> <machinedb filename>\n"
 	exit(1)
 
 
