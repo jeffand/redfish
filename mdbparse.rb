@@ -17,9 +17,13 @@ File.open(iloHostName).each_line do |line|
 	mdbTable[param] = value.strip	
 end
 
+#hostaddress = mdbTable[consoleHostName]
+
+hostaddress = '127.0.0.1:32768'
+
 puts "MDB Host values read\n".yellow
 
-iloSystemResponse = open('http://localhost:32768/redfish/v1/Systems/437XR1138R2/').read
+iloSystemResponse = open('http://' + hostaddress + 	'/redfish/v1/Systems/437XR1138R2/').read
 
 systemInfo = JSON.parse(iloSystemResponse)
 
@@ -39,9 +43,8 @@ biosInfo = JSON.parse(iloBiosResponse)
 
 puts "\nBoot Mode from system = \t\t#{biosInfo["Attributes"]["BootMode"]}".yellow
 
-myjsonobject = mdbTable.to_json
-
-puts myjsonobject
+#myjsonobject = mdbTable.to_json
+#puts myjsonobject
 
 
 
