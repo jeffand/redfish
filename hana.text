@@ -1,0 +1,142 @@
+echo "Applying OS hardening for entries in /etc/fstab" >> /root/post_kickstart.log 2>&1
+echo "/tmp      /var/tmp    none    bind    0 0" >> /etc/fstab
+awk '$2~"^/dev/shm$"{$4="nodev,noexec,nosuid"}1' OFS="\t" /etc/fstab >> /tmp/fstab
+mv /tmp/fstab /etc/fstab
+chmod 644 /etc/fstab
+echo "Disable interactive boots " >> /root/post_kickstart.log 2>&1
+sed -i 's/^PROMPT=yes$/PROMPT=no/' /etc/sysconfig/init
+# Set/Install  Zypper Post-install packages.
+/usr/bin/zypper ar http://salt/zypperrepos/salt/salt-minion-2k15.8/SLE_11_SP4 salt
+#/usr/bin/zypper ar http://salt/zypperrepos/salt/2016.11.2 salt
+#/usr/bin/zypper --quiet --non-interactive in salt
+/usr/bin/zypper in salt salt-minion
+
+/bin/rpm -q salt-minion >/dev/null 2>&1
+if [ $? -ne 0 ]
+then
+  echo "[${ddate}] The salt-minion was not installed; aborting the remainder of the post kickstart" >> /root/post_kickstart.log 2>&1
+  exit 1
+fi
+/bin/mkdir -p  /salt-tmp/minion
+/bin/chmod 755 /salt-tmp
+/bin/chmod 750 /salt-tmp/minion
+/bin/chown root:root /salt-tmp/minion
+ddate=`/bin/date +%m-%d-%Y" "%H:%M`
+echo "[${ddate}] Downloading minion packaged keys..." >> /root/post_kickstart.log 2>&1
+/usr/bin/wget http://salt/minion-keys/{{ datacenter }}/packaged_keys/{{ fqdn_hostname }}  -O /salt-tmp/minion/{{ fqdn_hostname }}  >> /root/post_kickstart.log 2>&1
+if [ ! -e /salt-tmp/minion/{{ fqdn_hostname }} ]
+then
+   ddate=`/bin/date +%m-%d-%Y" "%H:%M`
+   echo "[${ddate}] Failed to download {{ fqdn_hostname }} packaged keys " >> /root/post_kickstart.log 2>&1
+   exit 1
+fi
+
+
+#/usr/bin/python /salt-tmp/minion/{{ fqdn_hostname }} >> /root/post_kickstart.log 2>&1
+#status=$?
+
+
+
+#
+/bin/chmod 755 /salt-tmp/minion/{{ fqdn_hostname }}
+filetype=`/usr/bin/file /salt-tmp/minion/{{ fqdn_hostname }} | /bin/grep python | wc -l`
+if [ ${filetype} -eq 1 ]
+then
+  /usr/bin/python /salt-tmp/minion/{{ fqdn_hostname }} >> /root/post_kickstart.log 2>&1
+  status=$?
+else
+  /salt-tmp/minion/{{ fqdn_hostname }} >> /root/post_kickstart.log 2>&1
+  status=$?
+fi
+#
+
+
+
+/bin/rm -f /salt-tmp/minion/{{ fqdn_hostname }}
+/bin/rmdir /salt-tmp/minion
+ddate=`/bin/date +%m-%d-%Y" "%H:%M`
+if [ $status -eq 0 ]
+then
+  echo "[${ddate}] Successfully unpackaged minion's keys"  >> /root/post_kickstart.log 2>&1
+else
+  echo "[${ddate}] Failed to unpackaged minion's keys"  >> /root/post_kickstart.log 2>&1
+  exit 1
+fi
+ddate=`/bin/date +%m-%d-%Y" "%H:%M`
+echo "[${ddate}] Downloading minion config file..." >> /root/post_kickstart.log 2>&1
+/usr/bin/wget http://salt/minion-config/minion  -O /etc/salt/minion  >> /root/post_kickstart.log 2>&1
+ddate=`/bin/date +%m-%d-%Y" "%H:%M`
+/bin/touch /var/log/salt/minion
+/bin/chmod 640 /var/log/salt/minion
+/bin/ln -s /usr/local/bin/rsync /usr/bin/rsync
+ddate=`/bin/date +%m-%d-%Y" "%H:%M`
+echo "[${ddate}] Restarting the salt minion service with updated minion config file" >> /root/post_kickstart.log 2>&1
+#/etc/init.d/salt-minion restart  >> /root/post_kickstart.log 2>&1
+/bin/chown root:root /etc/salt/minion
+/bin/chmod 440 /etc/salt/minion
+ddate=`/bin/date +%m-%d-%Y" "%H:%M`
+echo "[${ddate}] Sleeping 15 seconds to allow for the salt master/minion key registration" >> /root/post_kickstart.log 2>&1
+/bin/sleep 15
+ddate=`/bin/date +%m-%d-%Y" "%H:%M`
+minion=`/bin/hostname`
+echo "[${ddate}] Initiating the the salt highstate on minion ${hostname}"  >> /root/post_kickstart.log 2>&1
+echo "/usr/bin/salt-call -l info state.highstate"  >> /root/salt-highstate.log
+/usr/bin/salt-call -l info state.highstate | tee -a /root/salt-highstate.log
+count=0
+while [ $count -lt 20 ]
+do
+  /bin/sleep 30
+  count=$((count+1))
+  highstate_running=`/usr/bin/salt-call saltutil.is_running state.highstate  | /usr/bin/wc -l`
+  [ $highstate_running == '1' ] && break
+done
+ddate=`/bin/date +%m-%d-%Y" "%H:%M`
+failed_count=`/bin/grep  "^Failed:" /root/salt-highstate.log | /usr/bin/tail -1 | /bin/cut -d: -f2`
+if [ ${failed_count} -gt 0 ]
+then
+  echo "[${ddate}] Salt highstate run had ${failed_count} failed task(s)"  >> /root/post_kickstart.log 2>&1
+else
+  echo "[${ddate}] Salt highstate run completed successfully"  >> /root/post_kickstart.log 2>&1
+fi
+echo "Note: " >> /root/post_kickstart.log 2>&1
+echo "      The system is not fully functional at this time; expect failed tasks to appear."  >> /root/post_kickstart.log 2>&1
+echo "      Highstate will be re-run on the next boot. Make sure not salt task have failed after"  >> /root/post_kickstart.log 2>&1
+echo "      the reboot."  >> /root/post_kickstart.log 2>&1
+ddate=`/bin/date +%m-%d-%Y" "%H:%M`
+echo "[${ddate}] Creating the /etc/init.d/salt-highstate file" >> /root/post_kickstart.log 2>&1
+cat >> /etc/init.d/salt-highstate <<EOF
+#! /bin/bash
+#
+# salt-highstate   Run the salt highstate at boot
+#
+# chkconfig: 345 98 05
+# description: Make sure the system runs the highstate tasks one more time after the initial kickstart.
+#
+#
+/sbin/chkconfig --del salt-highstate
+case "\$1" in
+    'start')  echo -n "PostKickstart...running salt highstate tasks: "
+              /bin/sleep 15
+              ddate=\`/bin/date +%m-%d-%Y" "%H:%M\`
+              echo "[${ddate}] post kickstart boot; running the salt highstate tasks again"  >> /root/state.highstate.afterkickstart 2>&1
+              (/usr/bin/salt-call -l info state.highstate) >> /root/state.highstate.afterkickstart 2>&1
+              exit 0
+              ;;
+        '*')  exit 0
+              ;;
+esac
+EOF
+echo "chmod 755 /etc/init.d/salt-highstate " >> /root/post_kickstart.log 2>&1
+/bin/chmod 755 /etc/init.d/salt-highstate
+/sbin/chkconfig SuSEfirewall2_setup off
+/sbin/chkconfig SuSEfirewall2_init off
+/sbin/chkconfig SuSEfirewall2_setup off
+/sbin/chkconfig --add salt-highstate
+/sbin/chkconfig --level 35 salt-highstate on
+echo "chkconfig --add salt-highstate " >> /root/post_kickstart.log 2>&1
+/sbin/chkconfig --levels 35 salt-highstate on
+echo "chkconfig --levels 35 salt-highstate " >> /root/post_kickstart.log 2>&1
+/bin/mkdir /salt
+/bin/chown anops:root /salt >/dev/null 2>&1
+[ $? -ne 0 ] && /bin/chown 2373:root /salt
+/bin/chmod 751 /salt
